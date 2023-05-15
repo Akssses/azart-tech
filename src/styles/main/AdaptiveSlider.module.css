@@ -19,8 +19,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    position: absolute;
-    width: 180px;
+    min-width: 180px;
     height: 150px;
     background: linear-gradient(180deg, rgba(218, 218, 218, 0.1) 0%, rgba(153, 153, 153, 0.1) 100%);
     border: 1px solid #808080;
@@ -95,4 +94,3 @@
     color: #FFFFFF;
     opacity: 0.8;
   }
-  

@@ -7,6 +7,8 @@ import "slick-carousel/slick/slick-theme.css";
 
 const Stack = ({cases}) => {
 
+  console.log(cases.stacks.stack)
+
   return (
     <section className={`container main_container`}>
       <div className={s.stack_header}>

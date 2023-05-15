@@ -1,74 +1,73 @@
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+
 import Header from "@/components/shared/Header";
 import Footer from "@/components/shared/Footer";
 import s from '@/styles/cv/CV.module.css'
 import Link from "next/link";
-import { SwishSpinner } from "react-spinners-kit";
+import { GraphQLClient, gql } from 'graphql-request'
 
-const TeamMemberPage = ({ initialData }) => {
-  const router = useRouter();
-  const { slug } = router.query;
-  const [teamMember, setTeamMember] = useState(initialData);
 
-  useEffect(() => {
-    if (slug) {
-      fetchTeamMember(slug);
-    }
-  }, [slug]);
 
-  const fetchTeamMember = async (slug) => {
-    const teamQuery = `
-      query MyQuery {
-        post(where: { slug: "${slug}" }) {
-          name
-          profession
-          excerpt
-          experiences
-          experience
-          workYears
-          aboutMe
-          category
-          coverImage {
+const graphcms = new GraphQLClient('https://api-us-west-2.hygraph.com/v2/clh4zdcwq5s5p01ue7mgtbapo/master')
+const QUERY = gql`
+ query Post($slug: String!) {
+    post(where: {slug: $slug}) {
+        name
+        profession
+        excerpt
+        experiences
+        experience
+        workYears
+        aboutMe
+        category
+        coverImage {
             url
-          }
-          awards {
-            html
-          }
-          awardsImg{
-            url
-          }
-          advancedSkills
-          skills
         }
-      }`;
+        awards {
+            html
+        }
+        awardsImg{
+            url
+        }
+        advancedSkills
+        skills
+    }
+ }
+`
 
-    const teamResponse = await fetch(
-      "https://api-us-west-2.hygraph.com/v2/clh4zdcwq5s5p01ue7mgtbapo/master",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
+const SLUGLIST = gql`
+ {
+    posts {
+        slug
+    }
+ }
+`
+
+export async function getStaticPaths() {
+    const {posts} = await graphcms.request(SLUGLIST)
+    return {
+        paths: posts.map((post) => ({params: {slug: post.slug}})),
+        fallback: false
+    }
+}
+
+export async function getStaticProps({params}){
+     const slug = params.slug
+     const data = await graphcms.request(QUERY, {slug})
+     const post = data.post
+     return {
+        props: {
+            post,
         },
-        body: JSON.stringify({ query: teamQuery }),
-      }
-    );
+        revalidate: 10,
+     }
+}
 
-    const teamData = await teamResponse.json();
-    setTeamMember(teamData.data.post);
-  };
-
-  if (router.isFallback || !teamMember) {
-
-    return  <div className="loader"><SwishSpinner color="#7140FD"/></div>;
-  }
-
+const TeamMemberPage = ({ post }) => {
 
   return (
     <>
       <Header/>
-      {teamMember && (
+      {post && (
         <>
             <div className={`container ${s.page_nav}`}>
                 <Link href='/'>Main Page</Link>
@@ -76,7 +75,7 @@ const TeamMemberPage = ({ initialData }) => {
                     <li>Team</li>
                 </Link>
                 <Link href='#'>
-                    <li>{teamMember.name}</li>
+                    <li>{post.name}</li>
                 </Link>
             </div>
 
@@ -84,13 +83,13 @@ const TeamMemberPage = ({ initialData }) => {
 
                 <div className={s.person_header}>
                     <div className={s.header_logo}>
-                        <img src={teamMember.coverImage?.url} alt="" />
+                        <img src={post.coverImage?.url} alt="" />
                         <div>
                             <div className={s.name_block}>
-                                <h1>{teamMember.name}</h1>
-                                <h2>{teamMember.profession}</h2>
+                                <h1>{post.name}</h1>
+                                <h2>{post.profession}</h2>
                             </div>
-                            <h3>{teamMember.excerpt}</h3>
+                            <h3>{post.excerpt}</h3>
                         </div>
                     </div>
                     <div className={s.person_link}>
@@ -105,14 +104,14 @@ const TeamMemberPage = ({ initialData }) => {
 
                 <div className={s.experience_block}>
                     <div className={s.exp_header}>
-                        {teamMember.experience && (
+                        {post.experience && (
                         <>
-                            <h3>Work experience <span>{teamMember.experience} years</span></h3>
-                            <p>{teamMember.workYears}</p>
+                            <h3>Work experience <span>{post.experience} years</span></h3>
+                            <p>{post.workYears}</p>
                         </>
                         )}
                     </div>
-                    {teamMember.experiences && teamMember.experiences.jobs && teamMember.experiences.jobs.map((job, index) => (
+                    {post.experiences && post.experiences.jobs && post.experiences.jobs.map((job, index) => (
                     <div key={index} className={s.experience}>
                         <div>
                             <h4>{job.title}</h4>
@@ -128,7 +127,7 @@ const TeamMemberPage = ({ initialData }) => {
                 <div className={s.about_block}>
                     <div className={s.about}>
                         <h2>About me</h2>
-                        <p className={s.about_p}>{teamMember.aboutMe}</p>
+                        <p className={s.about_p}>{post.aboutMe}</p>
                         <div className={s.skills_block}>
                             <h3>
                                 <span>Hard & </span>
@@ -136,10 +135,10 @@ const TeamMemberPage = ({ initialData }) => {
                                 skills
                             </h3>
                             <div className={s.skills}>
-                                {teamMember.skills && teamMember.skills.hard && teamMember.skills.hard.map((skill, index) => (
+                                {post.skills && post.skills.hard && post.skills.hard.map((skill, index) => (
                                     <p key={index} className={s.hard}>{skill}</p>
                                 ))}
-                                {teamMember.skills && teamMember.skills.soft && teamMember.skills.soft.map((skill, index) => (
+                                {post.skills && post.skills.soft && post.skills.soft.map((skill, index) => (
                                     <p key={index} className={s.soft}>{skill}</p>
                                 ))}
                             </div>
@@ -157,7 +156,7 @@ const TeamMemberPage = ({ initialData }) => {
                             <div className={s.adv_blocks}>
                                 <h3>Languages</h3>
                                 <div className={s.languages}>
-                                    {teamMember.advancedSkills && teamMember.advancedSkills.advancedLanguages && teamMember.advancedSkills.advancedLanguages.map((lang, index) => (
+                                    {post.advancedSkills && post.advancedSkills.advancedLanguages && post.advancedSkills.advancedLanguages.map((lang, index) => (
                                     <p key={index}>
                                         {lang.language} <span>{lang.level}</span>
                                     </p>
@@ -165,11 +164,11 @@ const TeamMemberPage = ({ initialData }) => {
                                 </div>
                             </div>
 
-                            {teamMember.advancedSkills && teamMember.advancedSkills.advancedEducation && teamMember.advancedSkills.advancedEducation.length > 0 && (
+                            {post.advancedSkills && post.advancedSkills.advancedEducation && post.advancedSkills.advancedEducation.length > 0 && (
                                 <div className={s.adv_blocks}>
                                     <h3>Education</h3>
                                     <div className={s.education}>
-                                        {teamMember.advancedSkills.advancedEducation.map((edu, index) => (
+                                        {post.advancedSkills.advancedEducation.map((edu, index) => (
                                             <div key={index}>
                                                 <p>{edu.description}</p>
                                                 <span>{edu.p}</span>
@@ -179,11 +178,11 @@ const TeamMemberPage = ({ initialData }) => {
                                 </div>
                             )}
 
-                            {teamMember.advancedSkills && teamMember.advancedSkills.additionalEducations && teamMember.advancedSkills.additionalEducations.length > 0 && (
+                            {post.advancedSkills && post.advancedSkills.additionalEducations && post.advancedSkills.additionalEducations.length > 0 && (
                                 <div className={s.adv_blocks}>
                                     <h3>Additional education</h3>
                                     <div className={s.education}>
-                                        {teamMember.advancedSkills.additionalEducations.map((edu, index) => (
+                                        {post.advancedSkills.additionalEducations.map((edu, index) => (
                                             <div key={index}>
                                                 <p>{edu.education}</p>
                                                 <span>{edu.p}</span>
@@ -196,7 +195,7 @@ const TeamMemberPage = ({ initialData }) => {
                         </div>
                     </div>
                     {
-                        teamMember.awards === null ? (  
+                        post.awards === null ? (  
                             <div className={s.awards}>
                                 <h2>Awards & Achievements</h2>
                                 <p className={s.comming}>They are not there yet, but they will definitely be soon! 💪</p>
@@ -206,14 +205,14 @@ const TeamMemberPage = ({ initialData }) => {
                                 <h2>Awards & Achievements</h2>
                                 <div>
                                     <div className={s.awards_content}>
-                                        {teamMember.awards?.html ? (
-                                            <div dangerouslySetInnerHTML={{ __html: teamMember.awards.html }}></div>
+                                        {post.awards?.html ? (
+                                            <div dangerouslySetInnerHTML={{ __html: post.awards.html }}></div>
                                         ) : ""}
                                     </div>
                                     <div className={s.rewards_block}>
                                         {
-                                            teamMember.awardsImg === null ? null : (
-                                                <img src={teamMember.awardsImg.url}/>
+                                            post.awardsImg === null ? null : (
+                                                <img src={post.awardsImg.url}/>
                                             )
                                         }
                                         <p>There will be more rewards coming soon!</p>
@@ -232,62 +231,4 @@ const TeamMemberPage = ({ initialData }) => {
   );
 };
 
-export async function getStaticProps({ params }) {
-  const { slug } = params;
-  const teamQuery = `
-    query MyQuery {
-      post(where: { slug: "${slug}" }) {
-        name
-        profession
-        excerpt
-        experiences
-        experience
-        workYears
-        aboutMe
-        category
-        coverImage {
-          url
-        }
-        awards {
-          html
-        }
-        awardsImg{
-          url
-        }
-        advancedSkills
-        skills
-      }
-    }`;
-
-  const teamResponse = await fetch(
-    "https://api-us-west-2.hygraph.com/v2/clh4zdcwq5s5p01ue7mgtbapo/master",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify({ query: teamQuery }),
-    }
-  );
-
-  const data = await teamResponse.json();
-
-  return {
-    props: {
-      initialData: data.data.post,
-    },
-    revalidate: 1,
-  };
-}
-
-export async function getStaticPaths() {
-  // Выполните запрос к API для получения всех возможных путей
-
-  return {
-    paths: [], // Замените этот массив на реальные пути
-    fallback: true,
-  };
-}
-
-export default TeamMemberPage;
+export default TeamMemberPage
